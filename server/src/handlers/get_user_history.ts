@@ -1,27 +1,26 @@
+import { db } from '../db';
+import { resultsTable } from '../db/schema';
 import { type GetUserHistoryInput, type CalculationResult } from '../schema';
+import { eq, desc } from 'drizzle-orm';
 
-export async function getUserHistory(input: GetUserHistoryInput): Promise<CalculationResult[]> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to fetch all calculation results for a specific user
-    // from the database, including related calculator information for display.
-    return Promise.resolve([
-        {
-            id: 1,
-            userId: input.userId,
-            calculatorId: 1,
-            inputJson: { areaHa: 2.5, doseKgPerHa: 100 },
-            resultValue: 250,
-            unitLabel: "kg",
-            createdAt: new Date()
-        },
-        {
-            id: 2,
-            userId: input.userId,
-            calculatorId: 2,
-            inputJson: { chickenCount: 50, feedKgPerChickenPerDay: 0.12 },
-            resultValue: 6,
-            unitLabel: "kg/day",
-            createdAt: new Date()
-        }
-    ] as CalculationResult[]);
-}
+export const getUserHistory = async (input: GetUserHistoryInput): Promise<CalculationResult[]> => {
+  try {
+    // Query all calculation results for the user, ordered by newest first
+    const results = await db.select()
+      .from(resultsTable)
+      .where(eq(resultsTable.userId, input.userId))
+      .orderBy(desc(resultsTable.createdAt))
+      .execute();
+
+    // Convert numeric fields back to numbers before returning
+    return results.map(result => ({
+      ...result,
+      resultValue: parseFloat(result.resultValue), // Convert string back to number
+      userId: result.userId!, // We know this is not null since we filtered by userId
+      inputJson: result.inputJson as Record<string, any>, // Cast inputJson to proper type
+    }));
+  } catch (error) {
+    console.error('Get user history failed:', error);
+    throw error;
+  }
+};

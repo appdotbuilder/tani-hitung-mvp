@@ -1,17 +1,30 @@
+import { db } from '../db';
+import { calculatorsTable } from '../db/schema';
 import { type CreateCalculatorInput, type Calculator } from '../schema';
 
-export async function createCalculator(input: CreateCalculatorInput): Promise<Calculator> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to create a new calculator and persist it
-    // in the database. This will be used for seeding default calculators.
-    return Promise.resolve({
-        id: 0, // Placeholder ID
+export const createCalculator = async (input: CreateCalculatorInput): Promise<Calculator> => {
+  try {
+    // Insert calculator record
+    const result = await db.insert(calculatorsTable)
+      .values({
         name: input.name,
         slug: input.slug,
         description: input.description,
         category: input.category,
         unitLabel: input.unitLabel,
-        formulaKey: input.formulaKey,
-        createdAt: new Date()
-    } as Calculator);
-}
+        formulaKey: input.formulaKey
+      })
+      .returning()
+      .execute();
+
+    // Return the created calculator
+    const calculator = result[0];
+    return {
+      ...calculator,
+      createdAt: calculator.createdAt
+    };
+  } catch (error) {
+    console.error('Calculator creation failed:', error);
+    throw error;
+  }
+};
